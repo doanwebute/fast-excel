@@ -62,14 +62,14 @@ trait Exportable
      *
      * @return \Symfony\Component\HttpFoundation\StreamedResponse|string
      */
-    public function download($path, callable $callback = null)
+    public function download($path, callable $callback = null,callable $colCofigFn = null)
     {
         if (method_exists(response(), 'streamDownload')) {
-            return response()->streamDownload(function () use ($path, $callback) {
-                self::exportOrDownload($path, 'openToBrowser', $callback);
+            return response()->streamDownload(function () use ($path, $callback, $colCofigFn) {
+                self::exportOrDownload($path, 'openToBrowser', $callback, $colCofigFn);
             }, $path);
         }
-        self::exportOrDownload($path, 'openToBrowser', $callback);
+        self::exportOrDownload($path, 'openToBrowser', $callback, $colCofigFn);
 
         return '';
     }
@@ -85,7 +85,7 @@ trait Exportable
      * @throws \OpenSpout\Writer\Exception\WriterNotOpenedException
      * @throws \OpenSpout\Common\Exception\SpoutException
      */
-    private function exportOrDownload($path, $function, callable $callback = null)
+    private function exportOrDownload($path, $function, callable $callback = null, callable $colConfigFn = null)
     {
         if (Str::endsWith($path, 'csv')) {
             $options = new \OpenSpout\Writer\CSV\Options();
@@ -101,6 +101,8 @@ trait Exportable
         $this->setOptions($options);
         /* @var \OpenSpout\Writer\WriterInterface $writer */
         $writer->$function($path);
+        if ($colConfigFn && method_exists($writer, 'setColumnWidth'))
+            $colConfigFn($writer);
 
         $has_sheets = ($writer instanceof \OpenSpout\Writer\XLSX\Writer || $writer instanceof \OpenSpout\Writer\ODS\Writer);
 
